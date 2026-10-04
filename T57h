@@ -1,0 +1,670 @@
+-- ========================================================
+-- Script Name: กูเอง🔥💀
+-- UI Library: Rayfield Library (Theme: Ocean/Dark-Blue)
+-- Executor: Delta Compatible
+-- ========================================================
+
+-- โหลด Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- สร้างหน้าต่างหลัก (Theme Ocean = ดำ-น้ำเงิน)
+local Window = Rayfield:CreateWindow({
+   Name = "กูเอง 🔥💀",
+   LoadingTitle = "กูเอง Hub - Loading...",
+   LoadingSubtitle = "Delta Executor Version",
+   Theme = "Ocean", -- โทนสีดำ-น้ำเงิน
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+   ConfigurationSaving = {
+      Enabled = false,
+      FolderName = nil,
+      FileName = "GuEngConfig"
+   },
+   KeySystem = false -- ไม่ใช้ระบบคีย์เพื่อให้ใช้งานสะดวก
+})
+
+-- ================= ========================
+-- [VARIABLES & SERVICES]
+-- ==========================================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Feature States
+local ESP_Enabled = false
+local Aimbot_Head = false
+local Aimbot_Torso = false
+local AntiBan_Enabled = true
+local Invisible_Enabled = false
+local Noclip_Enabled = false
+local Fly_Enabled = false
+local FlySpeed = 50
+
+-- Store ESP Highlights
+local ESP_Objects = {}
+
+-- ================= ========================
+-- [TABS CREATION]
+-- ==========================================
+local MainTab = Window:CreateTab("Main Hacks 🎯", 4483362458)
+local MovementTab = Window:CreateTab("Movement 🚀", 4483362458)
+local SystemTab = Window:CreateTab("System 🛡️", 4483362458)
+
+-- ================= ========================
+-- [1. ESP / มองสีแดง]
+-- ==========================================
+local function ApplyESP(player)
+    if player == LocalPlayer then return end
+    
+    local function AddHighlight(character)
+        if not character then return end
+        if character:FindFirstChild("GuEng_ESP") then return end
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "GuEng_ESP"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0) -- สีแดง
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.4
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = character
+        highlight.Parent = character
+    end
+
+    if player.Character then AddHighlight(player.Character) end
+    player.CharacterAdded:Connect(AddHighlight)
+end
+
+local function ClearESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.Character and player.Character:FindFirstChild("GuEng_ESP") then
+            player.Character.GuEng_ESP:Destroy()
+        end
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "ESP / มองสีแดง (Red Highlight)",
+   CurrentValue = false,
+   Flag = "ESPToggle",
+   Callback = function(Value)
+       ESP_Enabled = Value
+       if ESP_Enabled then
+           for _, player in pairs(Players:GetPlayers()) do
+               ApplyESP(player)
+           end
+           Players.PlayerAdded:Connect(function(player)
+               if ESP_Enabled then ApplyESP(player) end
+           end)
+       else
+           ClearESP()
+       end
+   end,
+})
+
+-- ================= ========================
+-- [2. AIMBOT (ล็อคหัว / ล็อคตัว)]
+-- ==========================================
+local function GetClosestPlayer(targetPartName)
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(targetPartName) and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            local targetPart = player.Character[targetPartName]
+            local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+            
+            if onScreen then
+                local mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                
+                if distance < shortestDistance and distance < 400 then -- รัศมีการล็อค
+                    shortestDistance = distance
+                    closestPlayer = targetPart
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+MainTab:CreateToggle({
+   Name = "ล็อคหัวผู้เล่น (Lock Head)",
+   CurrentValue = false,
+   Flag = "LockHeadToggle",
+   Callback = function(Value)
+       Aimbot_Head = Value
+       if Value then Aimbot_Torso = false end
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "ล็อคตัวผู้เล่น (Lock Torso)",
+   CurrentValue = false,
+   Flag = "LockTorsoToggle",
+   Callback = function(Value)
+       Aimbot_Torso = Value
+       if Value then Aimbot_Head = false end
+   end,
+})
+
+-- Loop Aimbot
+RunService.RenderStepped:Connect(function()
+    if Aimbot_Head then
+        local target = GetClosestPlayer("Head")
+        if target then Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position) end
+    elseif Aimbot_Torso then
+        local target = GetClosestPlayer("HumanoidRootPart") or GetClosestPlayer("UpperTorso")
+        if target then Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position) end
+    end
+end)
+
+-- ================= ========================
+-- [3. ล่องหน (Invisibility)]
+-- ==========================================
+MainTab:CreateToggle({
+   Name = "ล่องหน (Invisibility)",
+   CurrentValue = false,
+   Flag = "InvisToggle",
+   Callback = function(Value)
+       Invisible_Enabled = Value
+       local character = LocalPlayer.Character
+       if character then
+           for _, part in pairs(character:GetDescendants()) do
+               if part:IsA("BasePart") or part:IsA("Decal") then
+                   if part.Name ~= "HumanoidRootPart" then
+                       part.Transparency = Invisible_Enabled and 1 or 0
+                   end
+               end
+           end
+       end
+   end,
+})
+
+-- ================= ========================
+-- [4. เดินทะลุกำแพง (Noclip)]
+-- ==========================================
+MovementTab:CreateToggle({
+   Name = "เดินทะลุกำแพง (Noclip)",
+   CurrentValue = false,
+   Flag = "NoclipToggle",
+   Callback = function(Value)
+       Noclip_Enabled = Value
+   end,
+})
+
+RunService.Stepped:Connect(function()
+    if Noclip_Enabled and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- ================= ========================
+-- [5. ระบบบิน (Fly)]
+-- ==========================================
+local BodyVelocity, BodyGyro
+
+MovementTab:CreateToggle({
+   Name = "บิน (Fly)",
+   CurrentValue = false,
+   Flag = "FlyToggle",
+   Callback = function(Value)
+       Fly_Enabled = Value
+       local character = LocalPlayer.Character
+       if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+       local hrp = character.HumanoidRootPart
+
+       if Fly_Enabled then
+           BodyVelocity = Instance.new("BodyVelocity")
+           BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+           BodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+           BodyVelocity.Parent = hrp
+
+           BodyGyro = Instance.new("BodyGyro")
+           BodyGyro.MaxTorque = Vector3.new(100000, 100000, 100000)
+           BodyGyro.CFrame = hrp.CFrame
+           BodyGyro.Parent = hrp
+
+           task.spawn(function()
+               while Fly_Enabled and task.wait() do
+                   local moveDir = LocalPlayer.Character.Humanoid.MoveDirection
+                   BodyVelocity.Velocity = (Camera.CFrame.LookVector * (moveDir.Z * -FlySpeed)) + (Camera.CFrame.RightVector * (moveDir.X * FlySpeed))
+                   BodyGyro.CFrame = Camera.CFrame
+               end
+           end)
+       else
+           if BodyVelocity then BodyVelocity:Destroy() end
+           if BodyGyro then BodyGyro:Destroy() end
+       end
+   end,
+})
+
+MovementTab:CreateSlider({
+   Name = "ความเร็วการบิน (Fly Speed)",
+   Range = {10, 300},
+   Increment = 5,
+   Suffix = "Speed",
+   CurrentValue = 50,
+   Flag = "FlySpeedSlider",
+   Callback = function(Value)
+       FlySpeed = Value
+   end,
+})
+
+-- ================= ========================
+-- [6. กันแบน (Anti-Ban Basic)]
+-- ==========================================
+SystemTab:CreateToggle({
+   Name = "กันแบน / Bypass Client Checks",
+   CurrentValue = true,
+   Flag = "AntiBanToggle",
+   Callback = function(Value)
+       AntiBan_Enabled = Value
+       if AntiBan_Enabled then
+           pcall(function()
+               -- บล็อกการถูกตรวจจับสคริปต์เบื้องต้นจาก Client Log
+               local g = getrawmetatable(game)
+               setreadonly(g, false)
+               local oldNamecall = g.__namecall
+               g.__namecall = newcclosure(function(self, ...)
+                   local method = getnamecallmethod()
+                   if method == "Ban" or method == "Kick" then
+                       return nil
+                   end
+                   return oldNamecall(self, ...)
+               end)
+           end)
+       end
+   end,
+})
+
+-- ================= ========================
+-- [7. ปุ่ม Floating Toggle (ปิด/เปิด UI & เลื่อนได้)]
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+local UIStroke = Instance.new("UIStroke")
+
+ScreenGui.Parent = game.CoreGui
+ScreenGui.Name = "GuEng_ToggleGui"
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(15, 23, 42) -- สีดำ-น้ำเงินเข้ม
+ToggleButton.Position = UDim2.new(0.05, 0, 0.15, 0)
+ToggleButton.Size = UDim2.new(0, 110, 0, 45)
+ToggleButton.Font = Enum.Font.FredokaOne
+ToggleButton.Text = "กูเอง 🔥💀\n[ Open/Close ]"
+ToggleButton.TextColor3 = Color3.fromRGB(56, 189, 248) -- สีกรม/ฟ้าสด
+ToggleButton.TextSize = 12.000
+ToggleButton.Active = true
+ToggleButton.Draggable = true -- ทำให้ปุ่มเลื่อนลากตำแหน่งได้อิสระ
+
+UICorner.CornerRadius = UDim me and UDim.new(0, 12) or UDim.new(0, 12)
+UICorner.Parent = ToggleButton
+
+UIStroke.Parent = ToggleButton
+UIStroke.Color = Color3.fromRGB(56, 189, 248)
+UIStroke.Thickness = 2
+
+-- สลับการซ่อน/แสดง Rayfield UI เมื่อกดปุ่ม
+local uiVisible = true
+ToggleButton.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    if Rayfield and Rayfield.Flags then
+        -- ใช้ฟังก์ชันของ Rayfield ในการ Toggle Visibility
+        local mainGui = game.CoreGui:FindFirstChild("Rayfield") or game.Players.LocalPlayer.PlayerGui:FindFirstChild("Rayfield")
+        if mainGui then
+            mainGui.Enabled = uiVisible
+        end
+    end
+end)
+
+-- แจ้งเตือนเมื่อโหลดเสร็จ
+Rayfield:Notify({
+   Title = "สคริปต์ กูเอง🔥💀 โหลดสำเร็จ!",
+   Content = "ธีมดำ-น้ำเงิน พร้อมใช้งานแล้วครับ",
+   Duration = 5,
+   Image = 4483362458,
+})
+-- ========================================================
+-- Script Name: กูเอง🔥💀
+-- UI Library: Rayfield Library (Theme: Ocean/Dark-Blue)
+-- Executor: Delta Compatible
+-- ========================================================
+
+-- โหลด Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- สร้างหน้าต่างหลัก (Theme Ocean = ดำ-น้ำเงิน)
+local Window = Rayfield:CreateWindow({
+   Name = "กูเอง 🔥💀",
+   LoadingTitle = "กูเอง Hub - Loading...",
+   LoadingSubtitle = "Delta Executor Version",
+   Theme = "Ocean", -- โทนสีดำ-น้ำเงิน
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+   ConfigurationSaving = {
+      Enabled = false,
+      FolderName = nil,
+      FileName = "GuEngConfig"
+   },
+   KeySystem = false -- ไม่ใช้ระบบคีย์เพื่อให้ใช้งานสะดวก
+})
+
+-- ================= ========================
+-- [VARIABLES & SERVICES]
+-- ==========================================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Feature States
+local ESP_Enabled = false
+local Aimbot_Head = false
+local Aimbot_Torso = false
+local AntiBan_Enabled = true
+local Invisible_Enabled = false
+local Noclip_Enabled = false
+local Fly_Enabled = false
+local FlySpeed = 50
+
+-- Store ESP Highlights
+local ESP_Objects = {}
+
+-- ================= ========================
+-- [TABS CREATION]
+-- ==========================================
+local MainTab = Window:CreateTab("Main Hacks 🎯", 4483362458)
+local MovementTab = Window:CreateTab("Movement 🚀", 4483362458)
+local SystemTab = Window:CreateTab("System 🛡️", 4483362458)
+
+-- ================= ========================
+-- [1. ESP / มองสีแดง]
+-- ==========================================
+local function ApplyESP(player)
+    if player == LocalPlayer then return end
+    
+    local function AddHighlight(character)
+        if not character then return end
+        if character:FindFirstChild("GuEng_ESP") then return end
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "GuEng_ESP"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0) -- สีแดง
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.4
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = character
+        highlight.Parent = character
+    end
+
+    if player.Character then AddHighlight(player.Character) end
+    player.CharacterAdded:Connect(AddHighlight)
+end
+
+local function ClearESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.Character and player.Character:FindFirstChild("GuEng_ESP") then
+            player.Character.GuEng_ESP:Destroy()
+        end
+    end
+end
+
+MainTab:CreateToggle({
+   Name = "ESP / มองสีแดง (Red Highlight)",
+   CurrentValue = false,
+   Flag = "ESPToggle",
+   Callback = function(Value)
+       ESP_Enabled = Value
+       if ESP_Enabled then
+           for _, player in pairs(Players:GetPlayers()) do
+               ApplyESP(player)
+           end
+           Players.PlayerAdded:Connect(function(player)
+               if ESP_Enabled then ApplyESP(player) end
+           end)
+       else
+           ClearESP()
+       end
+   end,
+})
+
+-- ================= ========================
+-- [2. AIMBOT (ล็อคหัว / ล็อคตัว)]
+-- ==========================================
+local function GetClosestPlayer(targetPartName)
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(targetPartName) and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            local targetPart = player.Character[targetPartName]
+            local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+            
+            if onScreen then
+                local mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                
+                if distance < shortestDistance and distance < 400 then -- รัศมีการล็อค
+                    shortestDistance = distance
+                    closestPlayer = targetPart
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+MainTab:CreateToggle({
+   Name = "ล็อคหัวผู้เล่น (Lock Head)",
+   CurrentValue = false,
+   Flag = "LockHeadToggle",
+   Callback = function(Value)
+       Aimbot_Head = Value
+       if Value then Aimbot_Torso = false end
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "ล็อคตัวผู้เล่น (Lock Torso)",
+   CurrentValue = false,
+   Flag = "LockTorsoToggle",
+   Callback = function(Value)
+       Aimbot_Torso = Value
+       if Value then Aimbot_Head = false end
+   end,
+})
+
+-- Loop Aimbot
+RunService.RenderStepped:Connect(function()
+    if Aimbot_Head then
+        local target = GetClosestPlayer("Head")
+        if target then Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position) end
+    elseif Aimbot_Torso then
+        local target = GetClosestPlayer("HumanoidRootPart") or GetClosestPlayer("UpperTorso")
+        if target then Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position) end
+    end
+end)
+
+-- ================= ========================
+-- [3. ล่องหน (Invisibility)]
+-- ==========================================
+MainTab:CreateToggle({
+   Name = "ล่องหน (Invisibility)",
+   CurrentValue = false,
+   Flag = "InvisToggle",
+   Callback = function(Value)
+       Invisible_Enabled = Value
+       local character = LocalPlayer.Character
+       if character then
+           for _, part in pairs(character:GetDescendants()) do
+               if part:IsA("BasePart") or part:IsA("Decal") then
+                   if part.Name ~= "HumanoidRootPart" then
+                       part.Transparency = Invisible_Enabled and 1 or 0
+                   end
+               end
+           end
+       end
+   end,
+})
+
+-- ================= ========================
+-- [4. เดินทะลุกำแพง (Noclip)]
+-- ==========================================
+MovementTab:CreateToggle({
+   Name = "เดินทะลุกำแพง (Noclip)",
+   CurrentValue = false,
+   Flag = "NoclipToggle",
+   Callback = function(Value)
+       Noclip_Enabled = Value
+   end,
+})
+
+RunService.Stepped:Connect(function()
+    if Noclip_Enabled and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- ================= ========================
+-- [5. ระบบบิน (Fly)]
+-- ==========================================
+local BodyVelocity, BodyGyro
+
+MovementTab:CreateToggle({
+   Name = "บิน (Fly)",
+   CurrentValue = false,
+   Flag = "FlyToggle",
+   Callback = function(Value)
+       Fly_Enabled = Value
+       local character = LocalPlayer.Character
+       if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+       local hrp = character.HumanoidRootPart
+
+       if Fly_Enabled then
+           BodyVelocity = Instance.new("BodyVelocity")
+           BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+           BodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+           BodyVelocity.Parent = hrp
+
+           BodyGyro = Instance.new("BodyGyro")
+           BodyGyro.MaxTorque = Vector3.new(100000, 100000, 100000)
+           BodyGyro.CFrame = hrp.CFrame
+           BodyGyro.Parent = hrp
+
+           task.spawn(function()
+               while Fly_Enabled and task.wait() do
+                   local moveDir = LocalPlayer.Character.Humanoid.MoveDirection
+                   BodyVelocity.Velocity = (Camera.CFrame.LookVector * (moveDir.Z * -FlySpeed)) + (Camera.CFrame.RightVector * (moveDir.X * FlySpeed))
+                   BodyGyro.CFrame = Camera.CFrame
+               end
+           end)
+       else
+           if BodyVelocity then BodyVelocity:Destroy() end
+           if BodyGyro then BodyGyro:Destroy() end
+       end
+   end,
+})
+
+MovementTab:CreateSlider({
+   Name = "ความเร็วการบิน (Fly Speed)",
+   Range = {10, 300},
+   Increment = 5,
+   Suffix = "Speed",
+   CurrentValue = 50,
+   Flag = "FlySpeedSlider",
+   Callback = function(Value)
+       FlySpeed = Value
+   end,
+})
+
+-- ================= ========================
+-- [6. กันแบน (Anti-Ban Basic)]
+-- ==========================================
+SystemTab:CreateToggle({
+   Name = "กันแบน / Bypass Client Checks",
+   CurrentValue = true,
+   Flag = "AntiBanToggle",
+   Callback = function(Value)
+       AntiBan_Enabled = Value
+       if AntiBan_Enabled then
+           pcall(function()
+               -- บล็อกการถูกตรวจจับสคริปต์เบื้องต้นจาก Client Log
+               local g = getrawmetatable(game)
+               setreadonly(g, false)
+               local oldNamecall = g.__namecall
+               g.__namecall = newcclosure(function(self, ...)
+                   local method = getnamecallmethod()
+                   if method == "Ban" or method == "Kick" then
+                       return nil
+                   end
+                   return oldNamecall(self, ...)
+               end)
+           end)
+       end
+   end,
+})
+
+-- ================= ========================
+-- [7. ปุ่ม Floating Toggle (ปิด/เปิด UI & เลื่อนได้)]
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+local UIStroke = Instance.new("UIStroke")
+
+ScreenGui.Parent = game.CoreGui
+ScreenGui.Name = "GuEng_ToggleGui"
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(15, 23, 42) -- สีดำ-น้ำเงินเข้ม
+ToggleButton.Position = UDim2.new(0.05, 0, 0.15, 0)
+ToggleButton.Size = UDim2.new(0, 110, 0, 45)
+ToggleButton.Font = Enum.Font.FredokaOne
+ToggleButton.Text = "กูเอง 🔥💀\n[ Open/Close ]"
+ToggleButton.TextColor3 = Color3.fromRGB(56, 189, 248) -- สีกรม/ฟ้าสด
+ToggleButton.TextSize = 12.000
+ToggleButton.Active = true
+ToggleButton.Draggable = true -- ทำให้ปุ่มเลื่อนลากตำแหน่งได้อิสระ
+
+UICorner.CornerRadius = UDim me and UDim.new(0, 12) or UDim.new(0, 12)
+UICorner.Parent = ToggleButton
+
+UIStroke.Parent = ToggleButton
+UIStroke.Color = Color3.fromRGB(56, 189, 248)
+UIStroke.Thickness = 2
+
+-- สลับการซ่อน/แสดง Rayfield UI เมื่อกดปุ่ม
+local uiVisible = true
+ToggleButton.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    if Rayfield and Rayfield.Flags then
+        -- ใช้ฟังก์ชันของ Rayfield ในการ Toggle Visibility
+        local mainGui = game.CoreGui:FindFirstChild("Rayfield") or game.Players.LocalPlayer.PlayerGui:FindFirstChild("Rayfield")
+        if mainGui then
+            mainGui.Enabled = uiVisible
+        end
+    end
+end)
+
+-- แจ้งเตือนเมื่อโหลดเสร็จ
+Rayfield:Notify({
+   Title = "สคริปต์ กูเอง🔥💀 โหลดสำเร็จ!",
+   Content = "ธีมดำ-น้ำเงิน พร้อมใช้งานแล้วครับ",
+   Duration = 5,
+   Image = 4483362458,
+})
